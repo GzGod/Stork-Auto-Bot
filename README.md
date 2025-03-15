@@ -2,6 +2,10 @@
 
 用于 Stork Oracle 网络的自动验证机器人。此机器人帮助您自动化验证过程，通过 Stork Oracle 系统赚取奖励。
 
+## 注册
+- 下载插件 https://chromewebstore.google.com/detail/stork-verify/knnliglhgkmlblppdejchidfihjnockl
+- 使用谷歌或者邮箱注册，不介意的话可以使用我的邀请码：2R1ZZ3S8KG
+
 ## 功能
 
 - 自动从 Stork Oracle API 获取签名价格数据
