@@ -1,49 +1,49 @@
-# Stork Oracle Auto Bot
+# Stork Oracle 自动机器人 不介意的可以使用我的邀请码：2R1ZZ3S8KG
 
-Automated validation bot for the Stork Oracle network. This bot helps you automate the verification process to earn rewards through the Stork Oracle system.
+用于 Stork Oracle 网络的自动验证机器人。此机器人帮助您自动化验证过程，通过 Stork Oracle 系统赚取奖励。
 
-## Features
+## 功能
 
-- Automatically fetches signed price data from Stork Oracle API
-- Validates price data according to predefined rules
-- Submits validation results back to the API
-- Handles token refresh for continuous operation
-- Displays validation statistics and user information
-- Configurable validation interval
-- Support for proxy servers to distribute requests
-- Multi-threaded processing for improved performance
+- 自动从 Stork Oracle API 获取签名价格数据
+- 根据预定义规则验证价格数据
+- 将验证结果提交回 API
+- 处理令牌刷新以持续运行
+- 显示验证统计信息和用户信息
+- 可配置的验证间隔
+- 支持代理服务器以分发请求
+- 多线程处理以提高性能
 
-## Requirements
+## 要求
 
-- Node.js 14.0.0 or higher
-- Valid Stork Oracle account
+- Node.js 14.0.0 或更高版本
+- 有效的 Stork Oracle 账户
 
-## Installation
+## 安装
 
-1. Clone the repository:
+1. 克隆仓库：
 ```
-git clone https://github.com/airdropinsiders/Stork-Auto-Bot.git
+git clone https://github.com/Gzgod/Stork-Auto-Bot.git
 ```
 
-2. Navigate to the project directory:
+2. 进入项目目录：
 ```
 cd Stork-Auto-Bot
 ```
 
-3. Install dependencies:
+3. 安装依赖：
 ```
 npm install
 ```
 
-4. Configure your credentials (see Configuration section below)
+4. 配置您的凭据（请参见下面的配置部分）
 
-## Configuration
+## 配置
 
-### Easy Setup with account.js
+### 使用 account.js 进行简易设置
 
-The bot now uses a account.js file for credentials. 
+机器人现在使用 account.js 文件来存储凭据。
 
-1. Edit the generated `accounts.js` file with your credentials:
+1. 编辑生成的 `accounts.js` 文件，添加您的凭据：
 ```javascript
 export const accounts = [
   { username: "email1", password: "pass1" },
@@ -51,60 +51,51 @@ export const accounts = [
 ];
 ```
 
-2. Replace `username` and `password` with your Stork Oracle account credentials.
-just add new line if you wanna run many accounts
+2. 将 `username` 和 `password` 替换为您的 Stork Oracle 账户凭据。如果您想运行多个账户，只需添加新行。
 
-3. Run the bot :
+3. 运行机器人：
 ```
 node index.js
 ```
 
-### Optional: Proxy Configuration
+### 可选：代理配置
 
-To use proxy servers for distribution of requests:
+要使用代理服务器分发请求：
 
-1. Create a `proxies.txt` file in the project root
-2. Add one proxy per line in any of these formats:
-   - HTTP proxies: `http://user:pass@host:port`
-   - SOCKS proxies: `socks5://user:pass@host:port`
+1. 在项目根目录创建一个 `proxies.txt` 文件
+2. 每行添加一个代理，格式如下：
+   - HTTP 代理：`http://user:pass@host:port`
+   - SOCKS 代理：`socks5://user:pass@host:port`
 
-## Usage
+## 使用
 
-Start the bot with:
+启动机器人：
 ```
 node index.js
 ```
 
-The bot will:
-1. Authenticate using your credentials from account.js
-2. Fetch signed price data at regular intervals
-3. Validate each data point
-4. Submit validation results to Stork Oracle
-5. Display your current statistics
+机器人将会：
+1. 使用 account.js 中的凭据进行身份验证
+2. 定期获取签名价格数据
+3. 验证每个数据点
+4. 将验证结果提交到 Stork Oracle
+5. 显示您的当前统计信息
 
-## Advanced Configuration Options
+## 高级配置选项
 
-In your `config.json` file, you can adjust:
+在 `config.json` 文件中，您可以调整以下选项：
 
-- `stork.intervalSeconds`: How often the validation process runs in seconds (default: 5)
-- `threads.maxWorkers`: Number of concurrent validation workers (default: 1)
+- `stork.intervalSeconds`：验证过程运行的时间间隔（以秒为单位）（默认：5）
+- `threads.maxWorkers`：并发验证工作线程数（默认：1）
 
-## Troubleshooting
+## 故障排除
 
-- If you see authentication errors, check that your username and password in config.json are correct
-- If the bot fails to start, ensure your config.json file is properly formatted JSON
-- If you see token-related errors after successful authentication, the tokens.json file may be corrupted - delete it and let the bot regenerate it
-- For connection issues, check your internet connection and verify the Stork Oracle API is accessible
-- If using proxies, check that your proxies.txt is properly formatted and proxies are operational
+- 如果看到身份验证错误，请检查 config.json 中的用户名和密码是否正确
+- 如果机器人无法启动，请确保 config.json 文件是正确格式的 JSON
+- 如果在成功身份验证后看到令牌相关错误，可能是 tokens.json 文件已损坏 - 删除它并让机器人重新生成
+- 对于连接问题，请检查您的互联网连接并验证 Stork Oracle API 是否可访问
+- 如果使用代理，请检查 proxies.txt 是否格式正确且代理是否正常工作
 
-## Disclaimer
+## 免责声明
 
-This bot is provided for educational purposes only. Use at your own risk. The authors are not responsible for any consequences that may arise from using this bot, including but not limited to account termination or loss of rewards.
-
-## License
-
-MIT License
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+此机器人仅供教育用途。使用风险自负。作者对使用此机器人可能导致的任何后果（包括但不限于账户终止或奖励损失）不承担任何责任。
