@@ -18,7 +18,6 @@ function loadConfig() {
 
     if (!fs.existsSync(configPath)) {
       log(`配置文件未在 ${configPath} 找到，使用默认配置`, 'WARN');
-      // 如果配置文件不存在，创建默认配置文件
       const defaultConfig = {
         cognito: {
           region: 'ap-northeast-1',
@@ -57,8 +56,8 @@ const config = {
   },
   stork: {
     baseURL: 'https://app-api.jp.stork-oracle.network/v1',
-    authURL: 'https://api.jp.stork-oracle.network/auth', // 修复：完整定义 authURL
-    tokenPath: path.join(__dirname, 'tokens.json'),      // 修复：单独定义 tokenPath
+    authURL: 'https://api.jp.stork-oracle.network/auth',
+    tokenPath: path.join(__dirname, 'tokens.json'),
     intervalSeconds: userConfig.stork?.intervalSeconds || 10,
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
     origin: 'chrome-extension://knnliglhgkmlblppdejchidfihjnockl'
@@ -128,6 +127,28 @@ function loadProxies() {
   }
 }
 
+async function retryWithBackoff(fn, maxRetries = 5, initialDelay = 1000) {
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (error.message.includes('Too many requests') || error.code === 'TooManyRequestsException') {
+        attempt++;
+        const delay = initialDelay * Math.pow(2, attempt) + Math.random() * 1000;
+        log(`收到 Too Many Requests，第 ${attempt} 次重试，将等待 ${Math.round(delay/1000)} 秒`, 'WARN');
+        
+        if (attempt === maxRetries) {
+          throw new Error('达到最大重试次数，放弃本次认证');
+        }
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        throw error;
+      }
+    }
+  }
+}
+
 class CognitoAuth {
   constructor(username, password) {
     this.username = username;
@@ -186,11 +207,15 @@ class TokenManager {
   }
 
   async refreshOrAuthenticate() {
+    const authFn = async () => {
+      return this.refreshToken ? await this.auth.refreshSession(this.refreshToken) : await this.auth.authenticate();
+    };
+
     try {
-      let result = this.refreshToken ? await this.auth.refreshSession(this.refreshToken) : await this.auth.authenticate();
+      const result = await retryWithBackoff(authFn);
       await this.updateTokens(result);
     } catch (error) {
-      log(`令牌刷新/认证出错: ${error.message}`, 'ERROR');
+      log(`令牌刷新/认证最终失败: ${error.message}`, 'ERROR');
       throw error;
     }
   }
@@ -300,7 +325,7 @@ async function getSignedPrices(tokens) {
 }
 
 async function sendValidation(tokens, msgHash, isValid, proxy) {
-  try {
+  const sendRequest = async () => {
     const agent = getProxyAgent(proxy);
     const response = await axios({
       method: 'POST',
@@ -316,6 +341,10 @@ async function sendValidation(tokens, msgHash, isValid, proxy) {
     });
     log(`✓ 验证成功，消息哈希: ${msgHash.substring(0, 10)}... 通过 ${proxy || '直接连接'}`);
     return response.data;
+  };
+
+  try {
+    return await retryWithBackoff(sendRequest);
   } catch (error) {
     log(`✗ 验证失败，消息哈希: ${msgHash.substring(0, 10)}...: ${error.message}`, 'ERROR');
     throw error;
@@ -410,7 +439,6 @@ if (!isMainThread) {
 
       log(`使用 ${config.threads.maxWorkers} 个工作线程处理 ${signedPrices.length} 个数据点...`);
       const workers = [];
-
       const chunkSize = Math.ceil(signedPrices.length / config.threads.maxWorkers);
       const batches = [];
       for (let i = 0; i < signedPrices.length; i += chunkSize) {
@@ -431,6 +459,10 @@ if (!isMainThread) {
             worker.on('exit', () => resolve({ success: false, error: '工作线程退出' }));
           }));
         });
+        
+        if (i < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
 
       const results = await Promise.all(workers);
@@ -459,9 +491,10 @@ if (!isMainThread) {
       } else if (jobs == accounts.length - 1 || jobs === accounts.length) {
         jobs = 0;
         setTimeout(() => main(), config.stork.intervalSeconds * 1000);
-      } 
+      }
     } catch (error) {
-      log(`验证过程停止: ${error.message}`, 'ERROR');
+      log(`验证过程出错: ${error.message}`, 'ERROR');
+      setTimeout(() => runValidationProcess(tokenManager), 60 * 1000);
     }
   }
 
@@ -498,7 +531,6 @@ if (!isMainThread) {
     
     log(`正在处理 ${accounts[jobs].username}`);
     const tokenManager = new TokenManager(jobs);
-    jobs++;
 
     try {
       await tokenManager.getValidToken();
@@ -506,16 +538,34 @@ if (!isMainThread) {
 
       runValidationProcess(tokenManager);
       
-      // 防止垃圾信息，通过上面的 jobs 序列触发，这里禁用此间隔
-      // setInterval(() => runValidationProcess(tokenManager), config.stork.intervalSeconds * 1000);
-
       setInterval(async () => {
         await tokenManager.getValidToken();
         log('通过 Cognito 刷新令牌');
       }, 50 * 60 * 1000);
+
+      // 成功处理后才增加 jobs 计数器
+      jobs++;
     } catch (error) {
       log(`应用程序启动失败: ${error.message}`, 'ERROR');
-      process.exit(1);
+      
+      if (error.message.includes('Password attempts exceeded')) {
+        // 处理密码尝试次数超限的情况
+        log(`账号 ${accounts[jobs].username} 密码尝试次数超限，跳过此账号`, 'WARN');
+        
+        if (jobs < accounts.length - 1) {
+          // 如果不是最后一个账号，跳到下一个
+          jobs++;
+          setTimeout(() => main(), 1000); // 短暂延迟后处理下一个账号
+        } else {
+          // 如果是最后一个账号，返回第一个
+          jobs = 0;
+          log('已是最后一个账号，返回处理第一个账号', 'INFO');
+          setTimeout(() => main(), 1000);
+        }
+      } else {
+        // 其他错误，等待60秒后重试当前账号
+        setTimeout(() => main(), 60 * 1000);
+      }
     }
   }
   
